@@ -57,9 +57,11 @@ written as SQL for someone to run later:
   ANTHROPIC_API_KEY=...`), since no MCP tool manages secrets and it must
   never appear in chat or committed code.
 
-This app currently has **no data-fetching code wired up yet** — Phase 0 is
-page shells with correct metadata only. `src/lib/supabase.ts` is ready to
-use in Server Components once each module's real content is built.
+Five modules now read real content from these tables at request time via
+Server Components (`src/lib/content.ts`), with hourly ISR revalidation and a
+graceful fallback message if Supabase is briefly unreachable: E-Pass, Toy
+Train, Travel, Eat & Shop, and Utilities. The remaining four (Explore, Plan,
+Trekking, Ask) are still page shells — see Status below.
 
 ## Deploying (not done yet)
 
@@ -84,10 +86,17 @@ use in Server Components once each module's real content is built.
   metadata for all 9 modules plus the home page. Verified with a real
   production build (`next build` — all pages statically prerendered) and
   screenshotted in a headless browser this session.
-- **Phases 1–6** — not started. Per the brief's own build order: static
-  content modules next (E-Pass, Toy Train, Travel, Eat & Shop, Utilities),
-  reading from the now-live Supabase tables instead of seed JSON, since
-  the backend is already deployed.
+- **Phase 1 (static content modules)** — done for E-Pass, Toy Train, Travel,
+  Eat & Shop, and Utilities: each is now a Server Component querying the
+  live Supabase tables (`content_documents`, `emergency_contacts`) instead
+  of a static shell, with a "last verified" + source note footer and a
+  graceful fallback if the query fails. Eat & Shop currently covers
+  shopping only (no restaurant data seeded yet); Utilities covers emergency
+  numbers only (packing checklist and near-me lookups are explicitly
+  labelled as not built yet, rather than faked).
+- **Phases 2–6** — not started: Explore (attractions directory + map),
+  Plan (itinerary builder), Trekking (verification-gated, 0 published
+  routes today), Ask (AI concierge UI), then SEO/PWA polish.
 
 Before launch: real OotyMade logo/icon assets (current icons are a clearly
 placeholder mark), and confirm `trip.ootymade.com` as the final subdomain.
