@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PageShell } from "@/components/PageShell";
 import { ExternalLinkButton } from "@/components/ExternalLinkButton";
 import { VerifiedNote } from "@/components/VerifiedNote";
+import { GoodToKnow } from "@/components/GoodToKnow";
 import { getShoppingContent } from "@/lib/content";
 
 export const metadata: Metadata = {
@@ -26,9 +27,17 @@ export default async function EatAndShopPage() {
 
   const { data } = doc;
 
+  const goodToKnow = [
+    "\"GI Tagged\" means Geographical Indication — a government certification that the product genuinely comes from the Nilgiris, not a marketing label.",
+    "The genuine Ooty Varkey and Nilgiris tea are made locally in small batches — mass-produced lookalikes are common in tourist-strip shops.",
+    "Buy eucalyptus oil from a source you trust — a diluted, less potent version is a common substitute sold to tourists.",
+  ];
+
   return (
     <PageShell title="Eat & Shop" intro={data.intro}>
-      <section>
+      <GoodToKnow points={goodToKnow} />
+
+      <section className="mt-8">
         <h2 className="font-heading text-xl font-semibold text-forest">What to buy</h2>
         <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {data.items.map((item) => (

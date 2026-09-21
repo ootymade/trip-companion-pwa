@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PageShell } from "@/components/PageShell";
 import { VerifiedNote } from "@/components/VerifiedNote";
+import { GoodToKnow } from "@/components/GoodToKnow";
 import { getConnectivityContent } from "@/lib/content";
 
 export const metadata: Metadata = {
@@ -25,12 +26,20 @@ export default async function TravelPage() {
 
   const { data } = doc;
 
+  const goodToKnow = [
+    "Uber and Ola generally don't operate within Ooty town — that's normal, not a sign your app is broken.",
+    "The main approach road is a narrow, numbered-hairpin climb that gains most of the altitude in a short stretch — budget more time than the straight-line distance suggests.",
+    "Ask your hotel for their tied-up driver's contact — it's usually the simplest way to get a fair local taxi rate.",
+  ];
+
   return (
     <PageShell
       title="Travel"
       intro="Airport, rail, buses, local taxis and the ghat roads — realistic travel-time ranges, not optimistic ones."
     >
-      <section>
+      <GoodToKnow points={goodToKnow} />
+
+      <section className="mt-8">
         <h2 className="font-heading text-xl font-semibold text-forest">
           Nearest airport — {data.airport.name} ({data.airport.code})
         </h2>

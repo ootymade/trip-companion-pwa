@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageShell } from "@/components/PageShell";
+import { GoodToKnow } from "@/components/GoodToKnow";
 import { getEmergencyContacts } from "@/lib/content";
 
 export const metadata: Metadata = {
@@ -18,7 +19,14 @@ export default async function UtilitiesPage() {
       title="Utilities"
       intro="Emergency numbers, kept simple enough to read even on a bad connection."
     >
-      <section>
+      <GoodToKnow
+        points={[
+          "112 is India's universal emergency number — it works even if you don't know the local one for the service you need.",
+          "Signal is patchy on the ghat roads. Screenshot this page or save these numbers to your phone contacts before you set off.",
+        ]}
+      />
+
+      <section className="mt-8">
         <h2 className="font-heading text-xl font-semibold text-forest">Emergency numbers</h2>
         {contacts.length === 0 ? (
           <p className="mt-2 text-sm text-foreground-muted">

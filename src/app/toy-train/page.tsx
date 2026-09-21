@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PageShell } from "@/components/PageShell";
 import { ExternalLinkButton } from "@/components/ExternalLinkButton";
 import { VerifiedNote } from "@/components/VerifiedNote";
+import { GoodToKnow } from "@/components/GoodToKnow";
 import { getToyTrainContent } from "@/lib/content";
 
 export const metadata: Metadata = {
@@ -28,9 +29,17 @@ export default async function ToyTrainPage() {
 
   const { data } = doc;
 
+  const goodToKnow = [
+    "A UNESCO World Heritage rack-and-pinion railway — one of the steepest in Asia, and one of the few of its kind still running.",
+    "The Mettupalayam–Ooty and Coonoor–Ooty legs sell out fast in peak season (Apr–Jun, Christmas/New Year) — book on IRCTC as early as possible.",
+    "If the direct Mettupalayam train is sold out, the shorter Coonoor–Ooty leg still covers the most scenic stretch.",
+  ];
+
   return (
     <PageShell title="Toy Train" intro={data.summary}>
       <ExternalLinkButton href={data.irctcUrl}>Book on IRCTC</ExternalLinkButton>
+
+      <GoodToKnow points={goodToKnow} />
 
       <section className="mt-8">
         <h2 className="font-heading text-xl font-semibold text-forest">Stations</h2>
