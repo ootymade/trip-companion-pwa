@@ -5,8 +5,13 @@
 //   - network-first, falling back to cache, for page navigations and API
 //     calls — content here can change (attraction hours, AI answers), but
 //     the ghat roads have patchy signal, so a stale page beats no page.
+//
+// This file is a template: scripts/generate-sw.mjs stamps in a per-build id
+// and writes the result to public/sw.js before every dev/build run, so each
+// deploy gets a genuinely new cache name. public/sw.js itself is generated
+// (gitignored) — edit this file, not that one.
 
-const CACHE_NAME = "ootymade-trip-v1";
+const CACHE_NAME = "ootymade-trip-__BUILD_ID__";
 const STATIC_CACHE_PATTERNS = [/\/_next\/static\//, /\/icons\//, /\.(?:png|jpg|jpeg|svg|woff2?)$/];
 
 self.addEventListener("install", () => {

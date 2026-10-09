@@ -37,6 +37,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# generated at dev/build time by scripts/generate-sw.mjs — edit
+# src/sw-template.js instead
+/public/sw.js
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
