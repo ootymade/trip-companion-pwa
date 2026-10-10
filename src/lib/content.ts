@@ -50,7 +50,7 @@ export interface ContentDocument<T> {
 async function getContentDocument<T>(id: string): Promise<ContentDocument<T> | null> {
   const { data, error } = await supabase
     .from("content_documents")
-    .select("id, data, last_verified, source_note")
+    .select("id, data, last_verified_on, source_note")
     .eq("id", id)
     .single();
 
@@ -62,7 +62,7 @@ async function getContentDocument<T>(id: string): Promise<ContentDocument<T> | n
   return {
     id: data.id,
     data: data.data as T,
-    lastVerified: data.last_verified,
+    lastVerified: data.last_verified_on,
     sourceNote: data.source_note,
   };
 }
