@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { PageShell } from "@/components/PageShell";
 import { ExternalLinkButton } from "@/components/ExternalLinkButton";
 import { VerifiedNote } from "@/components/VerifiedNote";
-import { GoodToKnow } from "@/components/GoodToKnow";
-import { getToyTrainContent } from "@/lib/content";
+import { getToyTrainContent, getToyTrainSchedule } from "@/lib/content";
+import { getServerLocale } from "@/lib/i18n/getLocale";
+import { getTranslatedField } from "@/lib/i18n/getTranslatedField";
 
 export const metadata: Metadata = {
   title: "Ooty Toy Train Timings & Booking (Nilgiri Mountain Railway)",
@@ -13,36 +15,53 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600;
 
-export default async function ToyTrainPage() {
+function ToyTrainSkeleton() {
+  return (
+    <div className="space-y-3">
+      <div className="h-4 w-full max-w-md animate-pulse rounded bg-border" />
+      <div className="h-24 animate-pulse rounded-lg bg-border/60" />
+    </div>
+  );
+}
+
+async function ToyTrainBody() {
   const doc = await getToyTrainContent();
 
   if (!doc) {
     return (
-      <PageShell
-        title="Toy Train"
-        intro="We couldn't load the toy train schedule right now. Please try again shortly, or book directly on IRCTC below."
-      >
-        <ExternalLinkButton href="https://www.irctc.co.in">Book on IRCTC</ExternalLinkButton>
-      </PageShell>
+      <div>
+        <p className="text-foreground-muted">
+          We couldn&apos;t load the toy train schedule right now. Please try again shortly, or
+          book directly on IRCTC below.
+        </p>
+        <div className="mt-4">
+          <ExternalLinkButton href="https://www.irctc.co.in">Book on IRCTC</ExternalLinkButton>
+        </div>
+      </div>
     );
   }
 
   const { data } = doc;
-
-  const goodToKnow = [
-    "A UNESCO World Heritage rack-and-pinion railway — one of the steepest in Asia, and one of the few of its kind still running.",
-    "The Mettupalayam–Ooty and Coonoor–Ooty legs sell out fast in peak season (Apr–Jun, Christmas/New Year) — book on IRCTC as early as possible.",
-    "If the direct Mettupalayam train is sold out, the shorter Coonoor–Ooty leg still covers the most scenic stretch.",
-  ];
+  const [locale, schedule] = await Promise.all([getServerLocale(), getToyTrainSchedule()]);
+  const atAGlance = await getTranslatedField("content_documents", "toy_train", "atAGlance", locale, data.atAGlance);
 
   return (
-    <PageShell title="Toy Train" intro={data.summary}>
-      <ExternalLinkButton href={data.irctcUrl}>Book on IRCTC</ExternalLinkButton>
+    <div>
+      {/* 1. At a glance. */}
+      <p className="text-foreground-muted">{atAGlance.value}</p>
 
-      <GoodToKnow points={goodToKnow} />
+      {/* 2. Steps. */}
+      <section className="mt-6">
+        <h2 className="font-heading text-lg font-semibold text-forest">How to book</h2>
+        <ol className="mt-2 list-decimal space-y-2 pl-5 text-foreground-muted">
+          {data.steps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+      </section>
 
-      <section className="mt-8">
-        <h2 className="font-heading text-xl font-semibold text-forest">Stations</h2>
+      <section className="mt-6">
+        <h2 className="font-heading text-lg font-semibold text-forest">Station codes</h2>
         <ul className="mt-2 flex flex-wrap gap-2">
           {data.stations.map((station) => (
             <li
@@ -56,32 +75,80 @@ export default async function ToyTrainPage() {
       </section>
 
       <section className="mt-6">
-        <h2 className="font-heading text-xl font-semibold text-forest">Indicative schedule</h2>
-        <div className="mt-2 space-y-2">
-          {data.legs.map((leg) => (
-            <div key={`${leg.from}-${leg.to}`} className="rounded-lg border border-border bg-surface p-4">
-              <p className="font-semibold text-forest">
-                {leg.from} → {leg.to}
-              </p>
-              <p className="mt-1 text-sm text-foreground-muted">
-                Departs {leg.departsApprox}, arrives {leg.arrivesApprox} ({leg.durationApprox})
-              </p>
-            </div>
-          ))}
-        </div>
-        <p className="mt-2 text-xs text-foreground-muted">{data.fareNote}</p>
+        <h2 className="font-heading text-lg font-semibold text-forest">Timetable</h2>
+        {schedule.length === 0 ? (
+          <p className="mt-2 rounded-md border border-border bg-surface p-3 text-sm text-foreground-muted">
+            Current times aren&apos;t confirmed yet — check IRCTC directly when booking. (We
+            couldn&apos;t verify a current timetable from an official source.)
+          </p>
+        ) : (
+          <div className="mt-2 overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-surface text-foreground-muted">
+                <tr>
+                  <th className="p-2">Route</th>
+                  <th className="p-2">Departs</th>
+                  <th className="p-2">Arrives</th>
+                  <th className="p-2">Class</th>
+                </tr>
+              </thead>
+              <tbody>
+                {schedule.map((row) => (
+                  <tr key={row.id} className="border-t border-border">
+                    <td className="p-2">
+                      {row.fromCode} → {row.toCode}
+                    </td>
+                    <td className="p-2">{row.departsApprox}</td>
+                    <td className="p-2">{row.arrivesApprox}</td>
+                    <td className="p-2 capitalize">{row.ticketClass}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
+      {/* 3. Before you go. */}
       <section className="mt-6">
-        <h2 className="font-heading text-xl font-semibold text-forest">Booking tips</h2>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-foreground-muted">
-          {data.bookingTips.map((tip) => (
+        <h2 className="font-heading text-lg font-semibold text-forest">Before you go</h2>
+        <ul className="mt-2 list-disc space-y-1.5 pl-5 text-foreground-muted">
+          {data.beforeYouGo.map((tip) => (
             <li key={tip}>{tip}</li>
           ))}
         </ul>
       </section>
 
+      {/* 4. CTA button. */}
+      <div className="mt-6">
+        <ExternalLinkButton href={data.officialBookingUrl}>Book on IRCTC</ExternalLinkButton>
+      </div>
+
+      {/* 5. FAQs. */}
+      <section className="mt-8">
+        <h2 className="font-heading text-lg font-semibold text-forest">FAQs</h2>
+        <div className="mt-2 divide-y divide-border rounded-lg border border-border bg-surface">
+          {data.faqs.map((faq) => (
+            <div key={faq.question} className="p-4">
+              <p className="font-semibold text-forest">{faq.question}</p>
+              <p className="mt-1 text-sm text-foreground-muted">{faq.answer}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 6. Last verified on. */}
       <VerifiedNote lastVerified={doc.lastVerified} sourceNote={doc.sourceNote} />
+    </div>
+  );
+}
+
+export default function ToyTrainPage() {
+  return (
+    <PageShell title="Toy Train">
+      <Suspense fallback={<ToyTrainSkeleton />}>
+        <ToyTrainBody />
+      </Suspense>
     </PageShell>
   );
 }

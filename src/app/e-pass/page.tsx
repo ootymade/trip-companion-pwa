@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { PageShell } from "@/components/PageShell";
 import { ExternalLinkButton } from "@/components/ExternalLinkButton";
 import { VerifiedNote } from "@/components/VerifiedNote";
-import { QuickSteps } from "@/components/QuickSteps";
-import { GoodToKnow } from "@/components/GoodToKnow";
 import { getEPassContent } from "@/lib/content";
 import { getServerLocale } from "@/lib/i18n/getLocale";
 import { getTranslatedField } from "@/lib/i18n/getTranslatedField";
@@ -16,73 +15,54 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600;
 
-export default async function EPassPage() {
+function EPassSkeleton() {
+  return (
+    <div className="space-y-3">
+      <div className="h-4 w-full max-w-md animate-pulse rounded bg-border" />
+      <div className="h-24 animate-pulse rounded-lg bg-border/60" />
+    </div>
+  );
+}
+
+// The title renders immediately; everything that needs the Supabase fetch
+// (including the "at a glance" intro, which used to block the whole page
+// via PageShell's intro prop) streams in through this boundary instead —
+// the fetch no longer holds up first byte for the page shell.
+async function EPassBody() {
   const doc = await getEPassContent();
 
   if (!doc) {
     return (
-      <PageShell
-        title="E-Pass"
-        intro="We couldn't load the E-Pass details right now. Please try again shortly, or apply directly on the official portal below."
-      >
-        <ExternalLinkButton href="https://epass.tnega.org">Apply on epass.tnega.org</ExternalLinkButton>
-      </PageShell>
+      <div>
+        <p className="text-foreground-muted">
+          We couldn&apos;t load the E-Pass details right now. Please try again shortly, or apply
+          directly on the official portal below.
+        </p>
+        <div className="mt-4">
+          <ExternalLinkButton href="https://epass.tnega.org">Apply on epass.tnega.org</ExternalLinkButton>
+        </div>
+      </div>
     );
   }
 
   const { data } = doc;
   const locale = await getServerLocale();
-  const summary = await getTranslatedField("content_documents", "epass", "summary", locale, data.summary);
-
-  const quickSteps = [
-    "Open epass.tnega.org and verify your mobile number with the OTP sent by SMS.",
-    "Fill in your vehicle, passenger and travel details.",
-    "Download your QR-code pass and show it at the checkpost.",
-  ];
-
-  const goodToKnow = [
-    "Completely free — you only pay a separate small cash vehicle-entry fee at the checkpost.",
-    "One application covers your whole car, so a family or group travelling together only needs one pass.",
-    "Entries are capped per day and can fill up on weekends and holidays — apply a few days ahead if you can.",
-  ];
+  const atAGlance = await getTranslatedField("content_documents", "epass", "atAGlance", locale, data.atAGlance);
 
   return (
-    <PageShell title="E-Pass" intro={summary.value}>
-      {locale !== "en" && !summary.isTranslated ? (
-        <p className="mb-4 rounded-md border border-gold/40 bg-gold/10 px-3 py-2 text-xs text-gold-text">
+    <div>
+      {/* 1. At a glance. */}
+      <p className="text-foreground-muted">{atAGlance.value}</p>
+      {locale !== "en" && !atAGlance.isTranslated ? (
+        <p className="mt-3 rounded-md border border-gold/40 bg-gold/10 px-3 py-2 text-xs text-gold-text">
           Shown in English — the translation for this safety information hasn&apos;t been
           reviewed yet.
         </p>
       ) : null}
 
-      <ExternalLinkButton href={data.officialPortalUrl}>Apply on epass.tnega.org</ExternalLinkButton>
-
-      <QuickSteps steps={quickSteps} />
-
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <section>
-          <h2 className="font-heading text-xl font-semibold text-forest">Who needs it</h2>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-foreground-muted">
-            {data.whoNeedsIt.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="font-heading text-xl font-semibold text-forest">Who&apos;s exempt</h2>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-foreground-muted">
-            {data.whoIsExempt.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </section>
-      </div>
-
-      <GoodToKnow points={goodToKnow} />
-
-      <section className="mt-8">
-        <h2 className="font-heading text-xl font-semibold text-forest">Full step-by-step guide</h2>
+      {/* 2. Steps. */}
+      <section className="mt-6">
+        <h2 className="font-heading text-lg font-semibold text-forest">How to apply</h2>
         <ol className="mt-2 list-decimal space-y-2 pl-5 text-foreground-muted">
           {data.steps.map((step) => (
             <li key={step}>{step}</li>
@@ -90,8 +70,24 @@ export default async function EPassPage() {
         </ol>
       </section>
 
+      {/* 3. Before you go. */}
       <section className="mt-6">
-        <h2 className="font-heading text-xl font-semibold text-forest">FAQs</h2>
+        <h2 className="font-heading text-lg font-semibold text-forest">Before you go</h2>
+        <ul className="mt-2 list-disc space-y-1.5 pl-5 text-foreground-muted">
+          {data.beforeYouGo.map((tip) => (
+            <li key={tip}>{tip}</li>
+          ))}
+        </ul>
+      </section>
+
+      {/* 4. CTA button. */}
+      <div className="mt-6">
+        <ExternalLinkButton href={data.officialPortalUrl}>Apply on epass.tnega.org</ExternalLinkButton>
+      </div>
+
+      {/* 5. FAQs. */}
+      <section className="mt-8">
+        <h2 className="font-heading text-lg font-semibold text-forest">FAQs</h2>
         <div className="mt-2 divide-y divide-border rounded-lg border border-border bg-surface">
           {data.faqs.map((faq) => (
             <div key={faq.question} className="p-4">
@@ -102,7 +98,18 @@ export default async function EPassPage() {
         </div>
       </section>
 
+      {/* 6. Last verified on. */}
       <VerifiedNote lastVerified={doc.lastVerified} sourceNote={doc.sourceNote} />
+    </div>
+  );
+}
+
+export default function EPassPage() {
+  return (
+    <PageShell title="E-Pass">
+      <Suspense fallback={<EPassSkeleton />}>
+        <EPassBody />
+      </Suspense>
     </PageShell>
   );
 }
