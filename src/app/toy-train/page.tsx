@@ -28,11 +28,14 @@ async function ToyTrainBody() {
   const doc = await getToyTrainContent();
 
   if (!doc) {
+    // Same reasoning as the E-Pass page: a genuine fetch error and a row
+    // reset to unverified pending re-review both land here, and both get
+    // the same honest, calm message rather than one implying a retry will
+    // fix it.
     return (
       <div>
         <p className="text-foreground-muted">
-          We couldn&apos;t load the toy train schedule right now. Please try again shortly, or
-          book directly on IRCTC below.
+          This page is being updated. Please check IRCTC directly for now.
         </p>
         <div className="mt-4">
           <ExternalLinkButton href="https://www.irctc.co.in">Book on IRCTC</ExternalLinkButton>

@@ -32,11 +32,15 @@ async function EPassBody() {
   const doc = await getEPassContent();
 
   if (!doc) {
+    // Covers both a genuine fetch error and a row that's been reset to
+    // unverified (verified_by/last_verified_on null) pending re-review in
+    // /admin — either way, there's no confirmed content to show, so the
+    // honest, calm message is the same rather than implying a transient
+    // glitch worth retrying.
     return (
       <div>
         <p className="text-foreground-muted">
-          We couldn&apos;t load the E-Pass details right now. Please try again shortly, or apply
-          directly on the official portal below.
+          This page is being updated. Please check epass.tnega.org directly for now.
         </p>
         <div className="mt-4">
           <ExternalLinkButton href="https://epass.tnega.org">Apply on epass.tnega.org</ExternalLinkButton>
