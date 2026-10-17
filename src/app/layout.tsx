@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Playfair_Display, DM_Sans } from "next/font/google";
+import { Playfair_Display, DM_Sans, Noto_Sans_Tamil, Noto_Sans_Devanagari, Noto_Sans_Malayalam, Noto_Sans_Kannada } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
+import { LocaleProvider } from "@/components/i18n/LocaleProvider";
+import { getServerLocale } from "@/lib/i18n/getLocale";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -16,6 +18,17 @@ const dmSans = DM_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
 });
+
+// One subsetted font per script, each only fetched by the browser when a
+// page actually renders text in that script (preload: false means no
+// eager <link rel=preload> for a font most visitors will never need) — a
+// Tamil-reading visitor downloads Noto Sans Tamil, an English-only visitor
+// downloads none of these four, so per-locale weight stays at zero cost
+// for everyone else.
+const notoTamil = Noto_Sans_Tamil({ variable: "--font-noto-ta", subsets: ["tamil"], weight: ["400", "600"], preload: false });
+const notoDevanagari = Noto_Sans_Devanagari({ variable: "--font-noto-hi", subsets: ["devanagari"], weight: ["400", "600"], preload: false });
+const notoMalayalam = Noto_Sans_Malayalam({ variable: "--font-noto-ml", subsets: ["malayalam"], weight: ["400", "600"], preload: false });
+const notoKannada = Noto_Sans_Kannada({ variable: "--font-noto-kn", subsets: ["kannada"], weight: ["400", "600"], preload: false });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://trip.ootymade.com"),
@@ -39,17 +52,21 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const locale = await getServerLocale();
+
   return (
     <html
-      lang="en"
-      className={`${playfair.variable} ${dmSans.variable} h-full antialiased`}
+      lang={locale}
+      className={`${playfair.variable} ${dmSans.variable} ${notoTamil.variable} ${notoDevanagari.variable} ${notoMalayalam.variable} ${notoKannada.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <ServiceWorkerRegistration />
-        <SiteHeader />
-        <main className="flex-1">{children}</main>
-        <SiteFooter />
+        <LocaleProvider initialLocale={locale}>
+          <ServiceWorkerRegistration />
+          <SiteHeader />
+          <main className="flex-1">{children}</main>
+          <SiteFooter />
+        </LocaleProvider>
       </body>
     </html>
   );

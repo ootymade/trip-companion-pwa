@@ -5,6 +5,8 @@ import { VerifiedNote } from "@/components/VerifiedNote";
 import { QuickSteps } from "@/components/QuickSteps";
 import { GoodToKnow } from "@/components/GoodToKnow";
 import { getEPassContent } from "@/lib/content";
+import { getServerLocale } from "@/lib/i18n/getLocale";
+import { getTranslatedField } from "@/lib/i18n/getTranslatedField";
 
 export const metadata: Metadata = {
   title: "Ooty E-Pass: How to Apply Online (Step-by-Step)",
@@ -29,6 +31,8 @@ export default async function EPassPage() {
   }
 
   const { data } = doc;
+  const locale = await getServerLocale();
+  const summary = await getTranslatedField("content_documents", "epass", "summary", locale, data.summary);
 
   const quickSteps = [
     "Open epass.tnega.org and verify your mobile number with the OTP sent by SMS.",
@@ -43,7 +47,14 @@ export default async function EPassPage() {
   ];
 
   return (
-    <PageShell title="E-Pass" intro={data.summary}>
+    <PageShell title="E-Pass" intro={summary.value}>
+      {locale !== "en" && !summary.isTranslated ? (
+        <p className="mb-4 rounded-md border border-gold/40 bg-gold/10 px-3 py-2 text-xs text-gold-text">
+          Shown in English — the translation for this safety information hasn&apos;t been
+          reviewed yet.
+        </p>
+      ) : null}
+
       <ExternalLinkButton href={data.officialPortalUrl}>Apply on epass.tnega.org</ExternalLinkButton>
 
       <QuickSteps steps={quickSteps} />

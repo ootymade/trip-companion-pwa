@@ -42,10 +42,12 @@ const RATE_LIMIT_WINDOW_SECONDS = 60;
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
+type SupportedLanguage = 'en' | 'ta' | 'hi' | 'ml' | 'kn';
+
 interface RequestBody {
   message: string;
   history?: ChatMessage[];
-  language?: 'en' | 'ta';
+  language?: SupportedLanguage;
 }
 
 // ---------------------------------------------------------------------------
@@ -137,11 +139,19 @@ async function callLlm(req: LlmRequest): Promise<string> {
 // Grounding — fetch verified content and build the system prompt.
 // ---------------------------------------------------------------------------
 
-function buildSystemPrompt(context: string, language: 'en' | 'ta') {
+const LANGUAGE_NAMES: Record<SupportedLanguage, string> = {
+  en: 'English',
+  ta: 'Tamil',
+  hi: 'Hindi',
+  ml: 'Malayalam',
+  kn: 'Kannada',
+};
+
+function buildSystemPrompt(context: string, language: SupportedLanguage) {
   const languageInstruction =
-    language === 'ta'
-      ? 'Respond in Tamil, unless the traveller writes in English — then reply in English.'
-      : 'Respond in English, unless the traveller writes in Tamil — then reply in Tamil.';
+    language === 'en'
+      ? 'Respond in English, unless the traveller writes in another language — then reply in that language.'
+      : `Respond in ${LANGUAGE_NAMES[language]}, unless the traveller writes in a different language — then reply in that language instead. Numbers, place names, and proper nouns (E-Pass, IRCTC, Nilgiri Mountain Railway) may stay in their common form even inside a ${LANGUAGE_NAMES[language]} sentence.`;
 
   return `You are the OotyMade AI Concierge, a helpful, warm, practical assistant for tourists visiting Ooty and the Nilgiris. OotyMade is a 14-year-old local heritage brand — write like someone who has actually lived there, not a generic travel bot.
 
@@ -161,9 +171,9 @@ ${context}`;
 async function fetchVerifiedContext(supabaseUrl: string, supabaseKey: string): Promise<string> {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const [{ data: documents }, { data: attractions }, { data: emergencyContacts }, { data: treks }] =
+  const [{ data: documents }, { data: attractions }, { data: emergencyContacts }, { data: treks }, { data: statusItems }] =
     await Promise.all([
-      supabase.from('content_documents').select('id, data, last_verified'),
+      supabase.from('content_documents').select('id, data, last_verified_on'),
       supabase
         .from('attractions')
         .select(
@@ -173,12 +183,15 @@ async function fetchVerifiedContext(supabaseUrl: string, supabaseKey: string): P
       // RLS on trek_routes already restricts this to verified rows only —
       // an unverified route simply won't come back, even with the anon key.
       supabase.from('trek_routes').select('name, region, difficulty, distance_km, duration_hours, permit_note, safety_essentials'),
+      // Same story for today_status: RLS already drops anything unpublished,
+      // unverified, or outside its active window before it reaches here.
+      supabase.from('today_status').select('category, title, detail, severity, last_verified_on'),
     ]);
 
   const sections: string[] = [];
 
-  (documents ?? []).forEach((doc: { id: string; data: unknown; last_verified: string }) => {
-    sections.push(`### ${doc.id} (last verified ${doc.last_verified})\n${JSON.stringify(doc.data)}`);
+  (documents ?? []).forEach((doc: { id: string; data: unknown; last_verified_on: string }) => {
+    sections.push(`### ${doc.id} (last verified ${doc.last_verified_on})\n${JSON.stringify(doc.data)}`);
   });
 
   if (attractions?.length) {
@@ -188,6 +201,12 @@ async function fetchVerifiedContext(supabaseUrl: string, supabaseKey: string): P
   if (emergencyContacts?.length) {
     sections.push(`### emergency_contacts\n${JSON.stringify(emergencyContacts)}`);
   }
+
+  sections.push(
+    statusItems?.length
+      ? `### today_status (current active alerts — treat as more current than anything else in this context)\n${JSON.stringify(statusItems)}`
+      : '### today_status\nNo active alerts reported today.'
+  );
 
   sections.push(
     treks?.length
